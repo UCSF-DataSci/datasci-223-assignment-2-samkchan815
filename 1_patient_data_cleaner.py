@@ -41,6 +41,7 @@ Usage:
 import json
 import os
 import pandas as pd
+import sys
 
 def load_patient_data(filepath):
     """
@@ -53,6 +54,7 @@ def load_patient_data(filepath):
         list: List of patient dictionaries
     """
     # BUG: No error handling for file not found
+    # FIXED: try-except statement to handle file error
     try:
         with open(filepath, 'r') as file:
             return json.load(file)
@@ -80,10 +82,12 @@ def clean_patient_data(patients):
     
     for patient in patients:
         # BUG: Typo in key 'nage' instead of 'name'
+        # FIXED: changed age to name and correct spelling of name
         #patient['age'] = patient['name'].title()
         patient['name'] = patient['name'].title()
         
         # BUG: Wrong method name (fill_na vs fillna)
+        # FIXED: checked if missing data in dict and changed to 0 if so.
         #patient['age'] = patient['age'].fillna(0)
         try:
             patient['age'] = int(patient.get('age', 0))
@@ -91,6 +95,7 @@ def clean_patient_data(patients):
             patient['age'] = 0
      
         # BUG: Wrong method name (drop_duplcates vs drop_duplicates)
+        # FIXED: check if unique, and if duplicate, don't add
         #patient = patient.drop_duplicates()
         patient_key = tuple(sorted(patient.items()))
         if patient_key in seen:
@@ -100,14 +105,18 @@ def clean_patient_data(patients):
         cleaned_patients.append(patient)
         
         # BUG: Wrong comparison operator (= vs ==)
+        # FIXED: fixed comparitor
         if patient['age'] == 18:
             # BUG: Logic error - keeps patients under 18 instead of filtering them out
+            # FIXED: if less than 18, continue
+            if patient['age'] < 18:
+                continue
             cleaned_patients.append(patient)
                     # Filter out patients under 18
-        if patient['age'] < 18:
-            continue
+        
     
     # BUG: Missing return statement for empty list
+    # FIXED: return none if empty
     if not cleaned_patients:
         return None
     else:
@@ -123,18 +132,24 @@ def main():
     data_path = os.path.join(script_dir, 'data', 'raw', 'patients.json')
     
     # BUG: No error handling for load_patient_data failure
-    patients = load_patient_data(data_path)
-
+    # FIXED: exit if error
+    try:
+        patients = load_patient_data(data_path)
+    except FileNotFoundError:
+        print(f"Error: File not found at {data_path}")
+        sys.exit(1)
     # Clean the patient data
     cleaned_patients = clean_patient_data(patients)
     
     # BUG: No check if cleaned_patients is None
+    # FIXED: Check if None
     # Print the cleaned patient data
     print("Cleaned Patient Data:")
-    for patient in cleaned_patients:
-        # BUG: Using 'name' key but we changed it to 'nage'
-        print(f"Name: {patient['name']}, Age: {patient['age']}, Diagnosis: {patient['diagnosis']}")
-    
+    if cleaned_patients:
+        for patient in cleaned_patients:
+            # BUG: Using 'name' key but we changed it to 'nage'
+            print(f"Name: {patient['name']}, Age: {patient['age']}, Diagnosis: {patient['diagnosis']}")
+        
     # Return the cleaned data (useful for testing)
     return cleaned_patients
 
