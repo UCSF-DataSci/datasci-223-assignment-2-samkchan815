@@ -40,6 +40,7 @@ Usage:
 
 import json
 import os
+import pandas as pd
 
 def load_patient_data(filepath):
     """
@@ -52,8 +53,12 @@ def load_patient_data(filepath):
         list: List of patient dictionaries
     """
     # BUG: No error handling for file not found
-    with open(filepath, 'r') as file:
-        return json.load(file)
+    try:
+        with open(filepath, 'r') as file:
+            return json.load(file)
+    except FileNotFoundError:
+        print(f"Error: File not found -- {filepath}")
+        return None
 
 def clean_patient_data(patients):
     """
@@ -69,28 +74,45 @@ def clean_patient_data(patients):
     Returns:
         list: Cleaned list of patient dictionaries
     """
+
     cleaned_patients = []
+    seen = set()
     
     for patient in patients:
         # BUG: Typo in key 'nage' instead of 'name'
-        patient['nage'] = patient['name'].title()
+        #patient['age'] = patient['name'].title()
+        patient['name'] = patient['name'].title()
         
         # BUG: Wrong method name (fill_na vs fillna)
-        patient['age'] = patient['age'].fill_na(0)
-        
+        #patient['age'] = patient['age'].fillna(0)
+        try:
+            patient['age'] = int(patient.get('age', 0))
+        except (ValueError, TypeError):
+            patient['age'] = 0
+     
         # BUG: Wrong method name (drop_duplcates vs drop_duplicates)
-        patient = patient.drop_duplcates()
+        #patient = patient.drop_duplicates()
+        patient_key = tuple(sorted(patient.items()))
+        if patient_key in seen:
+            continue
+        seen.add(patient_key)
+
+        cleaned_patients.append(patient)
         
         # BUG: Wrong comparison operator (= vs ==)
-        if patient['age'] = 18:
+        if patient['age'] == 18:
             # BUG: Logic error - keeps patients under 18 instead of filtering them out
             cleaned_patients.append(patient)
+                    # Filter out patients under 18
+        if patient['age'] < 18:
+            continue
     
     # BUG: Missing return statement for empty list
     if not cleaned_patients:
         return None
-    
-    return cleaned_patients
+    else:
+        return cleaned_patients
+
 
 def main():
     """Main function to run the script."""
@@ -102,7 +124,7 @@ def main():
     
     # BUG: No error handling for load_patient_data failure
     patients = load_patient_data(data_path)
-    
+
     # Clean the patient data
     cleaned_patients = clean_patient_data(patients)
     
